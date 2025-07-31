@@ -1,0 +1,4 @@
+# requirements.txt for Expense Tracker UI
+# Install with: pip install -r requirements.txt
+
+tkcalendar

@@ -1,7 +1,12 @@
 import sqlite3
 
+def get_connection():
+    conn = sqlite3.connect("expenses.db")
+    #conn.set_trace_callback(print)  # Log all SQL statements
+    return conn
+
 def connect_db():
-    return sqlite3.connect("expenses.db")
+    return get_connection()
 
 def create_table():
     conn = connect_db()
