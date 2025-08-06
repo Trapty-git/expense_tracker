@@ -7,6 +7,9 @@ try:
     HAS_TKCALENDAR = True
 except ImportError:
     HAS_TKCALENDAR = False
+import matplotlib
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 
 class ExpenseTrackerApp:
     def __init__(self, root):
@@ -46,6 +49,17 @@ class ExpenseTrackerApp:
         # Summary section
         self.summary_label = tk.Label(self.root, text="", bg="#f0f4f8", fg="#22223b", font=("Arial", 12, "bold"))
         self.summary_label.pack(pady=5)
+
+        # Chart section (moved here for visibility)
+        chart_frame = tk.Frame(self.root, bg="#f0f4f8")
+        chart_frame.pack(fill=tk.BOTH, expand=False, pady=10)
+        self.chart_frame = chart_frame
+        self.chart_type = tk.StringVar(value="Pie")
+        chart_btn_frame = tk.Frame(chart_frame, bg="#f0f4f8")
+        chart_btn_frame.pack(side=tk.TOP, fill=tk.X)
+        tk.Button(chart_btn_frame, text="Pie Chart", command=lambda: self.show_chart("Pie"), bg="#3aafa9", fg="white").pack(side=tk.LEFT, padx=5)
+        tk.Button(chart_btn_frame, text="Bar Chart", command=lambda: self.show_chart("Bar"), bg="#3aafa9", fg="white").pack(side=tk.LEFT, padx=5)
+        self.chart_canvas = None
 
         # Search/filter
         search_frame = tk.Frame(self.root, bg="#f0f4f8")
@@ -117,6 +131,34 @@ class ExpenseTrackerApp:
             else:
                 self.tree.insert("", tk.END, values=exp)
 
+    def show_chart(self, chart_type):
+        expenses = view_expenses()
+        by_cat = {}
+        for exp in expenses:
+            by_cat[exp[2]] = by_cat.get(exp[2], 0) + float(exp[1])
+        if self.chart_canvas:
+            self.chart_canvas.get_tk_widget().destroy()
+        fig = plt.Figure(figsize=(4, 2.5), dpi=100)
+        if chart_type == "Pie":
+            ax = fig.add_subplot(111)
+            categories = list(by_cat.keys())
+            amounts = list(by_cat.values())
+            ax.pie(amounts, labels=categories, autopct='%1.1f%%', startangle=140)
+            ax.set_title("Expenses by Category")
+        elif chart_type == "Bar":
+            ax = fig.add_subplot(111)
+            categories = list(by_cat.keys())
+            amounts = list(by_cat.values())
+            ax.bar(categories, amounts, color="#3aafa9")
+            ax.set_ylabel("Amount")
+            ax.set_title("Expenses by Category")
+            for i, v in enumerate(amounts):
+                ax.text(i, v + max(amounts)*0.01, f"₹{v:.2f}", ha='center', va='bottom', fontsize=8)
+        self.chart_canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
+        self.chart_canvas.draw()
+        self.chart_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=False)
+        self.chart_type.set(chart_type)
+
     def update_summary(self):
         expenses = view_expenses()
         total = sum(float(exp[1]) for exp in expenses)
@@ -125,6 +167,7 @@ class ExpenseTrackerApp:
             by_cat[exp[2]] = by_cat.get(exp[2], 0) + float(exp[1])
         summary = f"Total: ₹{total:.2f}  |  " + "  |  ".join(f"{cat}: ₹{amt:.2f}" for cat, amt in by_cat.items())
         self.summary_label.config(text=summary)
+        self.show_chart(self.chart_type.get())
 
     def delete_selected(self):
         selected = self.tree.selection()
